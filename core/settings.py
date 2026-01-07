@@ -29,6 +29,7 @@ ALLOWED_HOSTS = []
 
 AUTH_USER_MODEL = 'users.User'
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -51,6 +52,8 @@ INSTALLED_APPS = [
     'smartCard',
     'users',
 ]
+
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -10,7 +10,7 @@ class User(AbstractUser):
     Attributes:
         None
 
-    Methods:
+    Methods:   
         full_name: Returns the full name of the user.
     """
     class Meta:

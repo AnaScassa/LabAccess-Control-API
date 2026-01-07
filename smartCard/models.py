@@ -1,6 +1,5 @@
 from django.db import models
 from thefuzz import fuzz
-
 from django.db import models
 from thefuzz import fuzz
 from users.models import User, UserProfile
