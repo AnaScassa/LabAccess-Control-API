@@ -15,7 +15,7 @@ class UserApiSerializer(serializers.ModelSerializer):
             "full_name",
             "username",
             "email",
-            "fairst_name",
+            "first_name",
             "last_name",
             "date_joined"
         ]
@@ -55,7 +55,6 @@ class AcessoSerializer(serializers.HyperlinkedModelSerializer):
 
     username_auth = serializers.SerializerMethodField()
     email_auth = serializers.SerializerMethodField()
-
     _perfil_cache = {}
 
     class Meta:
@@ -94,7 +93,6 @@ class AcessoSerializer(serializers.HyperlinkedModelSerializer):
 class UploadAcessoSerializer(serializers.Serializer):
     arquivo = serializers.FileField()
 
-
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
@@ -104,3 +102,4 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Group
         fields = ["url", "name"]
+

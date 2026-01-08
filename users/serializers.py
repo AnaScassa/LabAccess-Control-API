@@ -1,9 +1,11 @@
 from rest_framework import serializers
 from .models import UserProfile, DegreeArea, User
 
+
 class UserProfileSerializer(serializers.ModelSerializer):
     degree_area = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=DegreeArea.objects.all()
+        many=True,
+        queryset=DegreeArea.objects.all()
     )
     is_complete = serializers.ReadOnlyField()
 
@@ -19,12 +21,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "is_complete",
         ]
 
-class UserSerializer(serializers.ModelSerializer):
+
+class UserSerializer(serializers.HyperlinkedModelSerializer):
     userProfile = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
+            "url",
             "id",
             "username",
             "email",
@@ -43,3 +47,5 @@ class UserSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(
             f"/api/users/user-profile/{obj.id}/"
         )
+
+

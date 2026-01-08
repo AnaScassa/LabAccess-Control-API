@@ -24,7 +24,7 @@ class Usuario(models.Model):
         if self.user_auth:
             return
 
-        matricula = self.matricula.strip()
+        matricula = str(self.matricula).strip()
 
         for profile in UserProfile.objects.select_related("user"):
             if profile.academic_id and profile.academic_id.strip() == matricula:
@@ -32,7 +32,7 @@ class Usuario(models.Model):
                 return
 
         if not self.nome_usuario:
-            return
+            return 
 
         nome_usuario = self.nome_usuario.strip().lower()
 
@@ -64,18 +64,18 @@ class Usuario(models.Model):
 class Acesso(models.Model):
     usuario = models.ForeignKey(
         Usuario,
-        to_field='matricula',
-        related_name='acessos',
+        to_field = 'matricula',
+        related_name ='acessos',
         on_delete=models.CASCADE
-    )
-    data_acesso = models.DateTimeField()
-    desc_evento = models.CharField(max_length=100)
-    desc_area = models.CharField(max_length=100)
-    desc_leitor = models.CharField(max_length=100)
-    ent_sai = models.CharField(max_length=10)
+    ) 
+    data_acesso = models.DateTimeField() 
+    desc_evento = models.CharField(max_length=100) 
+    desc_area = models.CharField(max_length=100) 
+    desc_leitor = models.CharField(max_length=100) 
+    ent_sai = models.CharField(max_length=10) 
 
-    class Meta:
-        unique_together = ('usuario', 'data_acesso', 'desc_evento', 'desc_area', 'ent_sai')
+    class Meta: 
+        unique_together = ('usuario', 'data_acesso', 'desc_evento', 'desc_area', 'ent_sai') 
 
-    def __str__(self):
-        return f"Acesso de {self.usuario.nome_usuario} em {self.data_acesso}"
+    def __str__(self): 
+        return f"Acesso de {self.usuario.nome_usuario} em {self.data_acesso}" 
