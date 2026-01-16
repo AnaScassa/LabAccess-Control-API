@@ -1,4 +1,5 @@
 from django.db import models
+import requests
 from thefuzz import fuzz
 from django.db import models
 from thefuzz import fuzz
@@ -26,40 +27,69 @@ class Usuario(models.Model):
 
         matricula = str(self.matricula).strip()
 
-        for profile in UserProfile.objects.select_related("user"):
-            if profile.academic_id and profile.academic_id.strip() == matricula:
-                self.user_auth = profile.user
-                return
+        url = "http://localhost:8000/api/users/user-profile/"
+        headers = {
+            "X-Api-Key": "<API_KEY>"
+        }
+
+        try:
+            response = requests.get(url, headers=headers, timeout=5)
+            response.raise_for_status()
+            profiles = response.json()  
+        except requests.RequestException:
+            return
+
+        for profile in profiles:
+            academic_id = profile.get("academic_id")
+
+            if academic_id and academic_id.strip() == matricula:
+                user_id = profile.get("user")
+
+                if not user_id:
+                    return
+
+                try:
+                    self.user_auth = User.objects.get(id=user_id)
+                    return
+                except User.DoesNotExist:
+                    return
 
         if not self.nome_usuario:
-            return 
+            return
 
         nome_usuario = self.nome_usuario.strip().lower()
 
         melhor_match = None
         melhor_score = 0
 
-        for user in User.objects.all():
-            nome_user = f"{user.first_name} {user.last_name}".strip().lower()
+        for profile in profiles:
+            nome_api = profile.get("full_name", "").strip().lower()
 
-            if not nome_user:
+            if not nome_api:
                 continue
 
-            score = fuzz.token_sort_ratio(nome_usuario, nome_user)
+            score = fuzz.token_sort_ratio(nome_usuario, nome_api)
 
             if score > melhor_score:
                 melhor_score = score
-                melhor_match = user
+                melhor_match = profile
 
         if melhor_match and melhor_score >= 80:
-            self.user_auth = melhor_match
+            user_id = melhor_match.get("user")
+
+            if not user_id:
+                return
+
+            try:
+                self.user_auth = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                pass
 
     def save(self, *args, **kwargs):
         if not self.user_auth:
             self.tentar_vincular_user_auth()
 
         super().save(*args, **kwargs)
-
 
 class Acesso(models.Model):
     usuario = models.ForeignKey(

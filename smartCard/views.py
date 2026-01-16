@@ -1,16 +1,26 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
-from smartCard.models import Acesso, Usuario
-from .models import User
-from .serializers import UserApiSerializer
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.utils import timezone
-from rest_framework import status
+
 import pandas as pd
 
+from smartCard.models import Acesso, Usuario
+from users.models import User
+from .serializers import UserApiSerializer, UsuarioSerializer
+
+class UserViewSetApi(viewsets.ModelViewSet):
+    queryset = User.objects.all().order_by("-date_joined")
+    serializer_class = UserApiSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def lista_acessos(request):
-   
     acessos = Acesso.objects.values(
         'id',
         'usuario_id',
@@ -20,28 +30,29 @@ def lista_acessos(request):
         'desc_leitor',
         'ent_sai'
     )
-    return Response(list(acessos), status=200)
+    return Response(list(acessos), status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def lista_usuarios(request):
-   
     usuarios = Usuario.objects.values(
         'id',
         'nome_usuario'
     )
-    return Response(list(usuarios), status=200)
+    return Response(list(usuarios), status=status.HTTP_200_OK)
 
-class UserViewSetApi(viewsets.ModelViewSet):
-    
-    queryset = User.objects.all().order_by("-date_joined")
-    serializer_class = UserApiSerializer
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def carregar_acesso(request):
+    print("USER:", request.user)
+    print("AUTH:", request.user.is_authenticated)
 
     if 'file' not in request.FILES:
         return Response(
-            {"erro": "Nenhum arquivo enviado. Use 'arquivo' no form-data."},
+            {"erro": "Nenhum arquivo enviado. Use 'file' no form-data."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -50,7 +61,7 @@ def carregar_acesso(request):
     if not arquivo.name.endswith(".xls"):
         return Response(
             {"erro": "Apenas arquivos .xls são permitidos."},
-            status=status.HTTP_400_BAD_REQUEST 
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     try:
@@ -65,17 +76,20 @@ def carregar_acesso(request):
     duplicados = 0
 
     for _, row in df.iterrows():
-        categoria = str(row.get("MATRICULA", ""))[:3]
+        matricula = str(row.get("MATRICULA", "")).strip()
+        categoria = matricula[:3]
 
         usuario, _ = Usuario.objects.get_or_create(
-            matricula=row.get("MATRICULA", ""),
+            matricula=matricula,
             defaults={
                 "nome_usuario": row.get("NOME_ALUNO", "Desconhecido"),
                 "categoriaUsuario": categoria
             }
         )
 
-        data = timezone.make_aware(row.get("DATA"))
+        data = row.get("DATA")
+        if data and timezone.is_naive(data):
+            data = timezone.make_aware(data)
 
         _, created = Acesso.objects.get_or_create(
             usuario=usuario,
@@ -91,8 +105,11 @@ def carregar_acesso(request):
         else:
             duplicados += 1
 
-    return Response({
-        "novos_registros": novos,
-        "registros_duplicados": duplicados,
-        "total_linhas": len(df)
-    }, status=status.HTTP_201_CREATED)
+    return Response(
+        {
+            "novos_registros": novos,
+            "registros_duplicados": duplicados,
+            "total_linhas": len(df)
+        },
+        status=status.HTTP_201_CREATED
+    )

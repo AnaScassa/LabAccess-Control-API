@@ -1,19 +1,18 @@
 from django.urls import include, path
 from rest_framework import routers
-from smartCard.api import UserViewSet
 from smartCard.views import UserViewSetApi, carregar_acesso
 from smartCard.api import AcessoViewSet, GroupViewSet, UsuarioViewSet
-
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 router = routers.DefaultRouter()
-router.register(r"userAuth", UserViewSetApi) 
+router.register(r"userAuth", UserViewSetApi)
 router.register(r"groups", GroupViewSet)
 router.register(r"acessos", AcessoViewSet)
-router.register(r'usuarios', UsuarioViewSet)
+router.register(r"usuarios", UsuarioViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path("userAuth2/", UserViewSetApi.as_view({'get': 'list'})),
     path("upload-xls/", carregar_acesso),
+    path("login/", TokenObtainPairView.as_view(), name="login"),
+    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 ]
- 
