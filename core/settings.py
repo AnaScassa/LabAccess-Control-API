@@ -153,9 +153,13 @@ SIMPLE_JWT = {
 
 #API_KEY_CUSTOM_HEADER = "HTTP_X_API_KEY"
 
-REST_FRAMEWORK = {
+""" REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-        'rest_framework_api_key.permissions.HasAPIKey',
     ],
 }
+ """

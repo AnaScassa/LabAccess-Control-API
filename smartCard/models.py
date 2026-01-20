@@ -10,9 +10,7 @@ class Usuario(models.Model):
     nome_usuario = models.CharField(max_length=100)
     categoriaUsuario = models.CharField(max_length=50, blank=True, null=True)
 
-    user_auth = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
+    user_auth = models.BigIntegerField(
         null=True,
         blank=True
     )
@@ -27,7 +25,7 @@ class Usuario(models.Model):
 
         matricula = str(self.matricula).strip()
 
-        url = "http://localhost:8000/api/acesso/usuarios"
+        url = "http://localhost:8000/api/users/user-profile/"
         headers = {
             "X-Api-Key": "pbkdf2_sha256$1200000$aonByYw2GbwuyDvrGd1z9w$4x5BO477iAMn69G1gs3W1C3n1ZmLwxHpBZoKFII+QV0=",
             "Authorization": "Api-Key t37FhVxu.ZLsNAnOIlAwhFatVRVNWnNNEzX2UPRK1",
@@ -39,7 +37,7 @@ class Usuario(models.Model):
             response.raise_for_status()
             profiles = response.json()  
         except requests.RequestException:
-            return
+            return 
 
         for profile in profiles:
             academic_id = profile.get("academic_id")
@@ -64,6 +62,7 @@ class Usuario(models.Model):
         melhor_match = None
         melhor_score = 0
 
+        #aqui busca endpoint user
         for profile in profiles:
             nome_api = profile.get("full_name", "").strip().lower()
 
