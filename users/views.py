@@ -12,7 +12,7 @@ from rest_framework_api_key.permissions import HasAPIKey
 class UserProfileViewSet(ModelViewSet):
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
-    permission_classes = [IsAuthenticated ]
+    permission_classes = [IsAuthenticated | HasAPIKey]
     #authentication_classes = [JWTAuthentication ]
 
     def get_queryset(self):
