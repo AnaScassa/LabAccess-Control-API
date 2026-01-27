@@ -8,12 +8,14 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.utils import timezone
+from rest_framework.viewsets import ModelViewSet
+from rest_framework_api_key.models import APIKey
 
 import pandas as pd
 
 from smartCard.models import Acesso, Usuario
 from users.models import User
-from .serializers import UserApiSerializer
+from .serializers import UserApiSerializer, UsuarioSerializer
 from rest_framework_api_key.permissions import HasAPIKey
 from .models import Usuario
 from fuzzywuzzy import fuzz
@@ -78,7 +80,8 @@ def carregar_acesso(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    #separa em dict por matriculas no index  acessos[matricula] = [lista de acessos]
+    # dict: acessos[matricula] = [lista de acessos]
+    acessos = []
 
     novos = 0
     duplicados = 0
@@ -90,17 +93,19 @@ def carregar_acesso(request):
             headers={
                 "X-Api-Key": "pbkdf2_sha256$1200000$aonByYw2GbwuyDvrGd1z9w$4x5BO477iAMn69G1gs3W1C3n1ZmLwxHpBZoKFII+QV0=",
                 "Authorization": "Api-Key xb8vL1sU.wnTtzS31MbyyKeRICGTxTfvHKuxTSBt0",
-            },
+            }, 
             timeout=5
         )
         response.raise_for_status()
         profiles = response.json()
         end = timezone.localtime()
-        print(f"Tempo de resposta perfis: {(end - start).total_seconds()} segundos")
+        print(f"Tempo de resposta perfis: {(end - start).total_seconds()}s")
     except requests.RequestException:
         return Response(
             {"erro": "Não foi possível obter perfis de usuário."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
     try:
         start = timezone.localtime()
         response = requests.get(
@@ -114,57 +119,71 @@ def carregar_acesso(request):
         response.raise_for_status()
         users = response.json()
         end = timezone.localtime()
-        print(f"Tempo de resposta usuários: {(end - start).total_seconds()} segundos")
+        print(f"Tempo de resposta usuários: {(end - start).total_seconds()}s")
     except requests.RequestException:
         return Response(
             {"erro": "Não foi possível obter usuários."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    start = timezone.localtime()
 
-    # for no dict acesso
+    start = timezone.localtime()
+    total_vincular = 0
     for _, row in df.iterrows():
         matricula = str(row.get("MATRICULA", "")).strip()
+        if not matricula:
+            continue
+
         categoria = matricula[:3]
 
-        usuario, _ = Usuario.objects.get_or_create(
+        usuario, _ = Usuario.objects.get_or_create( # trocar para bulk
             matricula=matricula,
             defaults={
                 "nome_usuario": row.get("NOME_ALUNO", "Desconhecido"),
                 "categoriaUsuario": categoria
             }
         )
-        if usuario.user_auth == None:
-            start_vinculo = timezone.localtime()
+
+        if usuario.user_auth is None:
+            vincular_start = timezone.localtime()
             tentar_vincular_user_auth(usuario, users, profiles)
-            end_vinculo = timezone.localtime()
-            #print(f"Tempo de vinculação usuário {usuario.matricula}: {(end_vinculo - start_vinculo).total_seconds()} segundos")
+            vincular_end = timezone.localtime()
+            total_vincular += (vincular_end - vincular_start).total_seconds()
 
         data = row.get("DATA")
         if data and timezone.is_naive(data):
             data = timezone.make_aware(data)
-
-        #trocar Acesso.get_or_create para bulk create depois
-
-        _, created = Acesso.objects.get_or_create(
+        
+        acessos.append(
+            Acesso(
             usuario=usuario,
             data_acesso=data,
             desc_evento=row.get("DESC_EVENTO", ""),
             desc_area=row.get("DESC_AREA", ""),
             desc_leitor=row.get("DESC_LEITOR", ""),
             ent_sai=row.get("ENT_SAI", "")
+            )
         )
 
-        if created:
-            novos += 1
-        else:
-            duplicados += 1
+    
+    total_acessos_db = Acesso.objects.count()
+    created = Acesso.objects.bulk_create(acessos, ignore_conflicts=True)
+    total_acessos_db_after = Acesso.objects.count()
+
+    novos = total_acessos_db_after - total_acessos_db
+    
+    duplicados = total_acessos_db_after - novos
+
     end = timezone.localtime()
-    print(f"Tempo de processamento registros: {(end - start).total_seconds()} segundos")
+    print(f"Tempo de processamento registros: {(end - start).total_seconds()}s",
+          f"Tempo total vinculação user_auth: {total_vincular}s",
+          f' - Novos: {novos}, Duplicados: {duplicados}')
+
     return Response(
         {
             "novos_registros": novos,
             "registros_duplicados": duplicados,
-            "total_linhas": len(df)
+            "total_linhas": len(df),
+            "total_matriculas": len(acessos)  
         },
         status=status.HTTP_201_CREATED
     )  
@@ -207,3 +226,7 @@ def tentar_vincular_user_auth(usuario, users, profiles):
         if user_id:
             usuario.user_auth = int(user_id)
             usuario.save(update_fields=["user_auth"])
+
+
+
+
