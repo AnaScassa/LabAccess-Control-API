@@ -27,7 +27,7 @@ class Acesso(models.Model):
         related_name ='acessos',
         on_delete=models.CASCADE
     ) 
-    data_acesso = models.DateTimeField() 
+    data_acesso = models.DateTimeField(null=True, blank=True)
     desc_evento = models.CharField(max_length=100) 
     desc_area = models.CharField(max_length=100) 
     desc_leitor = models.CharField(max_length=100) 

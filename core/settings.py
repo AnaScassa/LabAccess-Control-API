@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'rest_framework',
     "rest_framework_api_key",
     "django_extensions",
+    'django_celery_beat' , 
+    'django_celery_results',
     
     # OBRIGATÓRIO para o allauth
     'django.contrib.sites',
@@ -163,3 +165,16 @@ SIMPLE_JWT = {
     ],
 }
  """
+
+# Configuração do Celery 
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "/media/"

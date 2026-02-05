@@ -20,7 +20,6 @@ class UserApiSerializer(serializers.ModelSerializer):
             "date_joined"
         ]
 
-#!
 class UsuarioSerializer(serializers.HyperlinkedModelSerializer):
     acessos = serializers.SerializerMethodField()
     user_auth_id = serializers.SerializerMethodField() 
