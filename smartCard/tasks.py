@@ -1,16 +1,20 @@
+from asyncio import sleep
 from celery import shared_task
 import pandas as pd
 import requests
+from django.utils import timezone
 from .models import Usuario, Acesso
+from fuzzywuzzy import fuzz
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, retry_kwargs={"max_retries": 3})
 def processar_xls(self, caminho_arquivo):
+    self.update_state(state="STARTED")
     print("PROCESSANDO:", caminho_arquivo)
 
     df = pd.read_excel(caminho_arquivo)
     headers = {
         "X-Api-Key": "pbkdf2_sha256$1200000$aonByYw2GbwuyDvrGd1z9w4x5BO477iAMn69G1gs3W1C3n1ZmLwxHpBZoKFIIQV0=",        
-            "Authorization": "Api-Key xb8vL1sU.wnTtzS31MbyyKeRICGTxTfvHKuxTSBt0",
+        "Authorization": "Api-Key xb8vL1sU.wnTtzS31MbyyKeRICGTxTfvHKuxTSBt0",
     }
 
     profiles = requests.get(
@@ -39,7 +43,7 @@ def processar_xls(self, caminho_arquivo):
             }
         )
 
-        data = row.get("DATA")
+        data = timezone.make_aware(pd.to_datetime(row.get("DATA")))
         Acesso.objects.get_or_create(
             usuario=usuario,
             data_acesso=data,
@@ -54,10 +58,12 @@ def processar_xls(self, caminho_arquivo):
         if usuario.user_auth is None:
             tentar_vincular_user_auth.delay(usuario.id, profiles, users)
 
+    
     print("PROCESSAMENTO FINALIZADO")
 
-@shared_task
-def tentar_vincular_user_auth(usuario_id, profiles, users):
+@shared_task(bind=True)
+def tentar_vincular_user_auth(self, usuario_id, profiles, users):
+    self.update_state(state="STARTED")
     from .models import Usuario
     from .services import vincular_por_matricula
     import requests
@@ -78,11 +84,9 @@ def tentar_vincular_user_auth(usuario_id, profiles, users):
 
     return vinculou
 
-@shared_task
-def tentar_vincular_por_nome(usuario_id, users):
-    from .models import Usuario
-    import requests
-    from fuzzywuzzy import fuzz
+@shared_task(bind=True)
+def tentar_vincular_por_nome(self, usuario_id, users):
+    self.update_state(state="STARTED")
     
     usuario = Usuario.objects.filter(
         id=usuario_id,
@@ -91,8 +95,6 @@ def tentar_vincular_por_nome(usuario_id, users):
 
     if not usuario or not usuario.nome_usuario:
         return False
-
-    
 
     nome_usuario = usuario.nome_usuario.lower().strip()
     melhor = None

@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from .tasks import processar_xls
 from .services import salvar_arquivo_temporario
 from django.urls import reverse
+from django_celery_results.models import TaskResult
 
 from smartcard.models import Acesso, Usuario
 from users.models import User
@@ -78,3 +79,22 @@ def carregar_acesso(request):
 
     response["Location"] = reverse("upload_xls")
     return response
+
+
+def agora_por_fila():
+    return {
+        "fila_rapida": TaskResult.objects.filter(
+            status="STARTED",
+            task_name__icontains="tentar_vincular_user_auth"
+        ).count(),
+
+        "fila_media": TaskResult.objects.filter(
+            status="STARTED",
+            task_name__icontains="tentar_vincular_por_nome"
+        ).count(),
+
+        "fila_pesada": TaskResult.objects.filter(
+            status="STARTED",
+            task_name__icontains="processar_xls"
+        ).count(),
+    }

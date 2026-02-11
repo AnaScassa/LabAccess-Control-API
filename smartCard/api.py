@@ -6,14 +6,17 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_api_key.permissions import HasAPIKey
 from rest_framework.authentication import SessionAuthentication
 from smartcard.models import User, Acesso, Usuario
+from celery import current_app
+from rest_framework.viewsets import ViewSet
 from smartcard.serializers import (
     GroupSerializer,
     UserSerializer,
     AcessoSerializer,
     UsuarioSerializer,
     TaskSerializer,
-    
 )
+from smartcard.views import agora_por_fila
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("-date_joined")
@@ -43,22 +46,38 @@ class UsuarioViewSet(viewsets.ReadOnlyModelViewSet):
         return super().get_queryset()
 
 
-class ListTasksApiView(viewsets.ViewSet):
-    
-    permission_classes = [IsAuthenticated | HasAPIKey]
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
+class ListTasksApiView(ViewSet):
 
     def list(self, request):
-        from celery import current_app
         i = current_app.control.inspect()
-        active = i.active()
-        scheduled = i.scheduled()
-        reserved = i.reserved()
+        stats = i.stats() or {}
 
-        data = {
-            "active": active,
-            "scheduled": scheduled,
-            "reserved": reserved
-         }
-        serializer = TaskSerializer(data)
-        return Response(serializer.data)
+        total_por_fila = {
+            "fila_rapida": 0,
+            "fila_media": 0,
+            "fila_pesada": 0,
+        }
+
+        for worker, info in stats.items():
+            total = info.get("total", {})
+
+            for task_name, count in total.items():
+                if "tentar_vincular_user_auth" in task_name:
+                    total_por_fila["fila_rapida"] += count
+                elif "tentar_vincular_por_nome" in task_name:
+                    total_por_fila["fila_media"] += count
+                elif "processar_xls" in task_name:
+                    total_por_fila["fila_pesada"] += count
+
+        return Response({
+            "workers_online": len(stats),
+            "workers": list(stats.keys()),
+            "total_por_fila": total_por_fila,
+            "em_execucao_agora": agora_por_fila(),
+        })
+    
+    # pega os workers ativos 
+    # em cada worker pegar a quantia da fila
+    #-----------------------------------------
+    # usar o redis para carregar o json
+    # para carregar o json nas tasks 
