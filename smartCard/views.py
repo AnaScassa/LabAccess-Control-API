@@ -69,22 +69,12 @@ def carregar_acesso(request):
 
     caminho = salvar_arquivo_temporario(arquivo)
 
-    task_uuid = str(uuid.uuid4())
-
-    Processamento.objects.create(
-        task_id=task_uuid,
-        status="PENDING"
-    )
-
-    processar_xls.apply_async(
-        args=[caminho],
-        task_id=task_uuid
-    )
+    task = processar_xls.delay(caminho)
 
     return Response(
         {
             "message": "Arquivo enviado para processamento.",
-            "task_id": task_uuid,
+            "task_id": task.id,
             "status": "PENDING"
         },
         status=status.HTTP_202_ACCEPTED
@@ -119,3 +109,7 @@ def status_task(request, task_id):
         "task_id": processamento.task_id,
         "status": processamento.status
     })
+ 
+#user da sessão, task_id_parent
+#primeiro as tasks, depois os signals e depois a view
+#como passar o id, como guardar os ids, como recuperar os ids na view

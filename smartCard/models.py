@@ -8,8 +8,6 @@ from users.models import User, UserProfile
 from django.db import models
 
 class Usuario(models.Model):
-    task_id = models.CharField(max_length=255, null=True, blank=True)
-    processamento_status = models.CharField(max_length=50, null=True, blank=True)
     matricula = models.CharField(max_length=20, unique=True)
     nome_usuario = models.CharField(max_length=100)
     categoriaUsuario = models.CharField(max_length=50, blank=True, null=True)
@@ -54,6 +52,9 @@ class Processamento(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    user = models.CharField(max_length=100,  null=True, unique=False)
+    task_id_parent = models.CharField(max_length=255, null=True, unique=False)
+
 
     def __str__(self):
         return f"{self.task_id} - {self.status}"
