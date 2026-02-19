@@ -9,12 +9,13 @@ from .tasks import processar_xls
 from .services import salvar_arquivo_temporario
 from django.urls import reverse
 from django_celery_results.models import TaskResult
+import uuid
 
 from smartcard.models import Acesso, Usuario
 from users.models import User
 from .serializers import UserApiSerializer
 from rest_framework_api_key.permissions import HasAPIKey
-from .models import Usuario
+from .models import Usuario, Processamento
 
 class UserViewSetApi(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("-date_joined")
@@ -51,6 +52,7 @@ def lista_usuarios(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated | HasAPIKey])
 def carregar_acesso(request):
+
     arquivo = request.FILES.get("file")
 
     if not arquivo:
@@ -67,19 +69,26 @@ def carregar_acesso(request):
 
     caminho = salvar_arquivo_temporario(arquivo)
 
-    task = processar_xls.delay(caminho)
+    task_uuid = str(uuid.uuid4())
 
-    response = Response(
+    Processamento.objects.create(
+        task_id=task_uuid,
+        status="PENDING"
+    )
+
+    processar_xls.apply_async(
+        args=[caminho],
+        task_id=task_uuid
+    )
+
+    return Response(
         {
-            "mensagem": "Arquivo enviado para processamento",
-            "task_id": task.id,
+            "message": "Arquivo enviado para processamento.",
+            "task_id": task_uuid,
+            "status": "PENDING"
         },
         status=status.HTTP_202_ACCEPTED
     )
-
-    response["Location"] = reverse("upload_xls")
-    return response
-
 
 def agora_por_fila():
     return {
@@ -98,3 +107,15 @@ def agora_por_fila():
             task_name__icontains="processar_xls"
         ).count(),
     }
+
+@api_view(['GET'])
+def status_task(request, task_id):
+    processamento = Processamento.objects.filter(task_id=task_id).first()
+
+    if not processamento:
+        return Response({"erro": "Task não encontrada"}, status=404)
+
+    return Response({
+        "task_id": processamento.task_id,
+        "status": processamento.status
+    })

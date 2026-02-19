@@ -76,8 +76,3 @@ class ListTasksApiView(ViewSet):
             "em_execucao_agora": agora_por_fila(),
         })
     
-    # pega os workers ativos 
-    # em cada worker pegar a quantia da fila
-    #-----------------------------------------
-    # usar o redis para carregar o json
-    # para carregar o json nas tasks 
