@@ -9,13 +9,13 @@ from .tasks import processar_xls
 from .services import salvar_arquivo_temporario
 from django.urls import reverse
 from django_celery_results.models import TaskResult
-import uuid
 
 from smartcard.models import Acesso, Usuario
 from users.models import User
 from .serializers import UserApiSerializer
 from rest_framework_api_key.permissions import HasAPIKey
 from .models import Usuario, Processamento
+import uuid
 
 class UserViewSetApi(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("-date_joined")
@@ -64,12 +64,25 @@ def carregar_acesso(request):
     if not arquivo.name.endswith(".xls"):
         return Response(
             {"erro": "Apenas arquivos .xls são permitidos."},
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_400_BAD_REQUEST 
         )
 
     caminho = salvar_arquivo_temporario(arquivo)
 
     task = processar_xls.delay(caminho)
+
+    task_uuid = str(uuid.uuid4())
+
+    Processamento.objects.create(
+        task_id=task_uuid,
+        status="PENDING",
+        user=request.user.id
+    )
+
+    processar_xls.apply_async(
+        args=[caminho],
+        task_id=task_uuid
+    )
 
     return Response(
         {
