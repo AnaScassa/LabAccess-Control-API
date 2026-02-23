@@ -83,12 +83,13 @@ def carregar_acesso(request):
         args=[caminho],
         task_id=task_uuid
     )
-
+    
     return Response(
         {
             "message": "Arquivo enviado para processamento.",
             "task_id": task.id,
-            "status": "PENDING"
+            "status": "PENDING",
+            "user" : request.user.id
         },
         status=status.HTTP_202_ACCEPTED
     )

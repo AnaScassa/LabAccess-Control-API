@@ -17,5 +17,4 @@ urlpatterns = [
     path("login/", TokenObtainPairView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("lista-usuarios/", lista_usuarios, name="lista_usuarios"),
-    #path("tasks/", ListTasksApiView.as_view({"get": "list"}), name="tasks_list"),
 ]

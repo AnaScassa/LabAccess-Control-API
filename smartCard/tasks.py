@@ -20,7 +20,7 @@ from django.utils import timezone
 from django.core.cache import cache
 
 from .models import Usuario, Acesso
-
+from celery import chain
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, retry_kwargs={"max_retries": 3},)
 def processar_xls(self, caminho_arquivo):
@@ -93,14 +93,15 @@ def processar_xls(self, caminho_arquivo):
         )
 
         if usuario.user_auth is None:
-            tentar_vincular_user_auth.delay(usuario.id)
-
-    print("PROCESSAMENTO FINALIZADO")
-
+            chain(
+                tentar_vincular_user_auth.s(usuario.id)
+            ).apply_async()
+            print("PROCESSAMENTO FINALIZADO")
 
 
 @shared_task(bind=True)
 def tentar_vincular_user_auth(self, usuario_id):
+
     self.update_state(state="STARTED")
 
     profiles = cache.get("profiles")
