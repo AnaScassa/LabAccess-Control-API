@@ -16,6 +16,7 @@ from .serializers import UserApiSerializer
 from rest_framework_api_key.permissions import HasAPIKey
 from .models import Usuario, Processamento
 import uuid
+from django.db import transaction
 
 class UserViewSetApi(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("-date_joined")
@@ -72,12 +73,13 @@ def carregar_acesso(request):
     task = processar_xls.delay(caminho)
 
     task_uuid = str(uuid.uuid4())
-
-    Processamento.objects.create(
-        task_id=task_uuid,
-        status="PENDING",
-        user=request.user.id
-    )
+    
+    with transaction.atomic():
+        Processamento.objects.create(
+            task_id=task_uuid,
+            status="PENDING",
+            user=request.user.id
+        )
 
     processar_xls.apply_async(
         args=[caminho],

@@ -5,6 +5,7 @@ from celery.signals import (
     task_failure
 )
 from .models import Processamento
+from django.db import transaction
 
 #start transaction
 @task_prerun.connect(weak=False)
@@ -12,26 +13,28 @@ def task_iniciada(sender=None, task_id=None, task=None, **kwargs):
     processo = Processamento.objects.filter(user__isnull=False).first()
     if processo:
         usuario = processo.user
-    Processamento.objects.update_or_create(
-        task_id=task_id,
-        defaults={
-            "task_id_parent": task.request.parent_id,
-            "status": "PROCESSANDO",
-            "user": usuario
-        }
-    )
+    with transaction.atomic():
+        Processamento.objects.update_or_create(
+            task_id=task_id,
+            defaults={
+                "task_id_parent": task.request.parent_id,
+                "status": "PROCESSANDO",
+                "user": usuario
+            }
+        )
 
 @after_task_publish.connect(weak=False)
 def task_enviada(sender=None, headers=None, **kwargs):
 
     task_id = headers.get("id")
 
-    Processamento.objects.update_or_create(
-        task_id=task_id,
-        defaults={
-            "status": "PENDING"
-        }
-    )
+    with transaction.atomic():
+        Processamento.objects.update_or_create(
+            task_id=task_id,
+            defaults={
+                "status": "PENDING"
+            }
+        )
    
 @task_prerun.connect(weak=False)
 def task_iniciada(sender=None, task_id=None, **kwargs):
