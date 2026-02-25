@@ -73,7 +73,7 @@ def carregar_acesso(request):
     task = processar_xls.delay(caminho)
 
     task_uuid = str(uuid.uuid4())
-    
+
     with transaction.atomic():
         Processamento.objects.create(
             task_id=task_uuid,
@@ -126,6 +126,3 @@ def status_task(request, task_id):
         "status": processamento.status
     })
  
-#user da sessão, task_id_parent
-#primeiro as tasks, depois os signals e depois a view
-#como passar o id, como guardar os ids, como recuperar os ids na view

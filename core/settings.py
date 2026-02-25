@@ -32,6 +32,7 @@ AUTH_USER_MODEL = 'users.User'
 CORS_ALLOWED_ORIGINS = [
           
             "http://localhost:5173", # For development
+            "http://143.106.5.41:5173",
             # Add any other allowed origins
         ]
 
