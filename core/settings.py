@@ -33,6 +33,7 @@ CORS_ALLOWED_ORIGINS = [
           
             "http://localhost:5173", # For development
             "http://143.106.5.41:5173",
+            "http://localhost:3000",
             # Add any other allowed origins
         ]
 
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     "django_extensions",
     'django_celery_beat' , 
     'django_celery_results',
+    "corsheaders",
     
     # OBRIGATÓRIO para o allauth
     'django.contrib.sites',
@@ -74,6 +76,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "allauth.account.middleware.AccountMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 ] 
 
 ROOT_URLCONF = 'core.urls'
